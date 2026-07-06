@@ -96,6 +96,16 @@ Or `webmcp.json`:
 }
 ```
 
+### Quick Start (OpenCode)
+
+After adding the config above, restart OpenCode. The bridge tools are now available — just ask:
+
+> **"Navigate to a WebMCP-enabled page and tell me what tools are available"**
+
+OpenCode calls `webmcp_navigate` → bridge opens the page → `webmcp_status` to show discovered tools. From there you can invoke any page tool, take screenshots, evaluate JS, or manage tabs conversationally.
+
+For a full 8-step walkthrough (status → navigate → discover → invoke → screenshot → evaluate → history), see `examples/GETTING_STARTED.md`.
+
 ### Environment Variables
 
 | Variable | Default | Description |
