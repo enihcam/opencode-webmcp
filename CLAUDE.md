@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **opencode-webmcp** (44 symbols, 71 relationships, 4 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **opencode-webmcp** (552 symbols, 690 relationships, 17 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
@@ -39,7 +39,11 @@ This project is indexed by GitNexus as **opencode-webmcp** (44 symbols, 71 relat
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-| Work in the Cluster_1 area (4 symbols) | `.claude/skills/generated/cluster-1/SKILL.md` |
+| Work in the Cluster_1 area (6 symbols) | `.claude/skills/generated/cluster-1/SKILL.md` |
+| Work in the Cluster_2 area (5 symbols) | `.claude/skills/generated/cluster-2/SKILL.md` |
+| Work in the Cluster_3 area (5 symbols) | `.claude/skills/generated/cluster-3/SKILL.md` |
+| Work in the Cluster_4 area (4 symbols) | `.claude/skills/generated/cluster-4/SKILL.md` |
 | Work in the Cluster_0 area (3 symbols) | `.claude/skills/generated/cluster-0/SKILL.md` |
+| Work in the Test area (3 symbols) | `.claude/skills/generated/test/SKILL.md` |
 
 <!-- gitnexus:end -->

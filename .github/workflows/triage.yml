@@ -1,0 +1,25 @@
+name: Triage
+
+on:
+  issues:
+    types: [opened, labeled]
+
+  # Allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    # Only run when needs-triage is added, or on new open
+    if: |
+      github.event.action == 'workflow_dispatch' ||
+      (github.event.action == 'opened') ||
+      (github.event.action == 'labeled' && github.event.label.name == 'needs-triage')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Initial triage comment
+        uses: actions/github-script@v7
+        with:
+          script-path: .github/workflows/scripts/triage.js
