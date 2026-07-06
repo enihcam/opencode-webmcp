@@ -11,7 +11,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: antongulin/robin@v2
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
