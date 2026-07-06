@@ -1,6 +1,6 @@
 {
   "name": "webmcp-bridge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "MCP server bridge that exposes WebMCP tools from Chrome to OpenCode",
   "main": "server.js",
