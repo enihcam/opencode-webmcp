@@ -1,109 +1,24 @@
 // =============================================================================
 // webmcp-bridge unit tests — no Chrome required
 //
-// Pure-function tests for parseCliArgs, readConfigFile, loadConfig,
-// recordHistory, clearHistory, makeTabId, and BRIDGE_TOOLS validation.
+// Pure-function tests for config module (parseCliArgs, readConfigFile, loadConfig,
+// makeTabId, BRIDGE_TOOLS) and history helpers (recordHistory, clearHistory).
 //
-
-import crypto from 'node:crypto';
-
-
 // Usage:
 //   node test/unit.mjs
 // =============================================================================
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import * as yaml from 'js-yaml';
 import assert from 'node:assert';
-
-// ---- copies of pure functions from server.js ---------------------------------
-
-const DEFAULTS = {
-  chromePath: '/usr/bin/chromium',
-  targetUrl: 'https://www.google.com',
-  headless: true,
-  historyMax: 1000,
-  logHistory: false,
-  declarativeScan: true,
-};
-
-function parseCliArgs(argv) {
-  const args = { config: null, headless: undefined };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--config' && i + 1 < argv.length) {
-      args.config = argv[++i];
-    } else if (a === '--no-headless') {
-      args.headless = false;
-    } else if (a === '--headless') {
-      args.headless = true;
-    }
-  }
-  return args;
-}
-
-function readConfigFile(configPath) {
-  const ext = path.extname(configPath).toLowerCase();
-  const text = fs.readFileSync(configPath, 'utf8');
-  if (ext === '.yaml' || ext === '.yml') {
-    return yaml.load(text, { schema: yaml.CORE_SCHEMA });
-  }
-  if (ext === '.json') {
-    return JSON.parse(text);
-  }
-  throw new Error(`Unsupported config file extension '${ext}'. Use .yaml, .yml, or .json.`);
-}
-
-function loadConfig({ argv, env, cwd }) {
-  const cli = parseCliArgs(argv);
-
-  const fromEnv = {};
-  if (env.CHROME_PATH) fromEnv.chromePath = env.CHROME_PATH;
-  if (env.WEBMCP_TARGET_URL) fromEnv.targetUrl = env.WEBMCP_TARGET_URL;
-  if (env.WEBMCP_HEADLESS !== undefined) fromEnv.headless = env.WEBMCP_HEADLESS !== 'false';
-  if (env.WEBMCP_HISTORY_MAX) fromEnv.historyMax = parseInt(env.WEBMCP_HISTORY_MAX, 10);
-  if (env.WEBMCP_LOG_HISTORY) fromEnv.logHistory = env.WEBMCP_LOG_HISTORY === 'true';
-  if (env.WEBMCP_DECLARATIVE_SCAN !== undefined) fromEnv.declarativeScan = env.WEBMCP_DECLARATIVE_SCAN !== 'false';
-
-  let configPath = cli.config;
-  if (!configPath) {
-    for (const name of ['webmcp.yaml', 'webmcp.yml', 'webmcp.json']) {
-      const candidate = path.join(cwd, name);
-      if (fs.existsSync(candidate)) {
-        configPath = candidate;
-        break;
-      }
-    }
-  }
-
-  let fromFile = {};
-  if (configPath) {
-    if (!fs.existsSync(configPath)) {
-      throw new Error(`Config file not found: ${configPath}`);
-    }
-    try {
-      const parsed = readConfigFile(configPath);
-      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        throw new Error(
-          `Config file must contain an object, got ${parsed === null ? 'null' : Array.isArray(parsed) ? 'array' : typeof parsed}`,
-        );
-      }
-      fromFile = parsed;
-    } catch (err) {
-      throw new Error(`Failed to parse ${configPath}: ${err.message}`);
-    }
-  }
-
-  const fromCli = {};
-  if (cli.headless !== undefined) fromCli.headless = cli.headless;
-
-  return { ...DEFAULTS, ...fromEnv, ...fromFile, ...fromCli };
-}
-
-function makeTabId() {
-  return crypto.randomUUID();
-}
+import {
+  DEFAULTS,
+  parseCliArgs,
+  readConfigFile,
+  loadConfig,
+  makeTabId,
+  BRIDGE_TOOLS,
+} from '../lib/config.mjs';
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -470,38 +385,9 @@ group('makeTabId', () => {
 });
 
 // -----------------------------------------------------------------------------
-// BRIDGE_TOOLS structure validation
+// BRIDGE_TOOLS structure validation (imported from config module)
 // -----------------------------------------------------------------------------
 group('BRIDGE_TOOLS structure', () => {
-  // Replicate the server's BRIDGE_TOOLS array inline for validation.
-  // If server.js ever exports it, we can import directly instead.
-  const BRIDGE_TOOLS = [
-    // ---- keep in sync with server.js:BRIDGE_TOOLS ----
-    { name: 'webmcp_navigate', title: 'Navigate to URL', hasAnnotations: true,
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true } },
-    { name: 'webmcp_status', title: 'Get bridge and page status', hasAnnotations: true,
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
-    { name: 'webmcp_evaluate', title: 'Evaluate JavaScript on page', hasAnnotations: true,
-      annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true } },
-    { name: 'webmcp_invoke_tool', hasAnnotations: false },
-    { name: 'webmcp_register_test_tools', title: 'Register sample WebMCP tools', hasAnnotations: true,
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
-    { name: 'webmcp_screenshot', title: 'Capture page screenshot', hasAnnotations: true,
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
-    { name: 'webmcp_history', title: 'Get recent tool history', hasAnnotations: true,
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
-    { name: 'webmcp_clear_history', title: 'Clear tool history', hasAnnotations: true,
-      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false } },
-    { name: 'webmcp_open_tab', title: 'Open new tab', hasAnnotations: true,
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
-    { name: 'webmcp_switch_tab', title: 'Switch active tab', hasAnnotations: true,
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
-    { name: 'webmcp_list_tabs', title: 'List open tabs', hasAnnotations: true,
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
-    { name: 'webmcp_close_tab', title: 'Close tab', hasAnnotations: true,
-      annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false } },
-  ];
-
   test('all tools have unique names', () => {
     const names = BRIDGE_TOOLS.map(t => t.name);
     assert.strictEqual(new Set(names).size, names.length);
@@ -513,15 +399,22 @@ group('BRIDGE_TOOLS structure', () => {
     }
   });
 
-  test('all tools have inputSchema property', () => {
+  test('all tools have required fields (name, description, inputSchema)', () => {
     for (const t of BRIDGE_TOOLS) {
-      // The real BRIDGE_TOOLS have inputSchema — here we just validate at the
-      // schema level that every definition includes it.
-      // We can't test it without duplicating all the definitions.
+      assert.ok(typeof t.name === 'string' && t.name.length > 0,
+        `tool missing name (index ${BRIDGE_TOOLS.indexOf(t)})`);
+      assert.ok(typeof t.description === 'string' && t.description.length > 0,
+        `tool ${t.name} missing description`);
+      assert.ok(typeof t.inputSchema === 'object' && t.inputSchema !== null,
+        `tool ${t.name} missing inputSchema`);
     }
-    // Placeholder: the real test needs the actual server.js definitions.
-    // For now we validate name uniqueness and prefix which are sufficient
-    // structure checks.
+  });
+
+  test('all tools have inputSchema with type "object"', () => {
+    for (const t of BRIDGE_TOOLS) {
+      assert.strictEqual(t.inputSchema.type, 'object',
+        `tool ${t.name}.inputSchema.type should be 'object', got '${t.inputSchema.type}'`);
+    }
   });
 
   test('names match the expected set', () => {
@@ -543,35 +436,56 @@ group('BRIDGE_TOOLS structure', () => {
     assert.deepStrictEqual(names, expected.sort());
   });
 
-  test('tools with annotations have valid readOnlyHint', () => {
+  test('webmcp_invoke_tool is the only tool without annotations', () => {
+    const noAnnotations = BRIDGE_TOOLS.filter(t => !t.annotations);
+    assert.strictEqual(noAnnotations.length, 1);
+    assert.strictEqual(noAnnotations[0].name, 'webmcp_invoke_tool');
+  });
+
+  test('all annotated tools have valid readOnlyHint boolean', () => {
     for (const t of BRIDGE_TOOLS) {
-      if (!t.hasAnnotations) continue;
+      if (!t.annotations) continue;
       assert.strictEqual(typeof t.annotations.readOnlyHint, 'boolean',
         `${t.name}.readOnlyHint should be boolean`);
     }
   });
 
-  test('tools with annotations have valid destructiveHint', () => {
+  test('all annotated tools have valid destructiveHint boolean', () => {
     for (const t of BRIDGE_TOOLS) {
-      if (!t.hasAnnotations) continue;
+      if (!t.annotations) continue;
       assert.strictEqual(typeof t.annotations.destructiveHint, 'boolean',
         `${t.name}.destructiveHint should be boolean`);
     }
   });
 
-  test('tools with annotations have valid openWorldHint', () => {
+  test('all annotated tools have valid openWorldHint boolean', () => {
     for (const t of BRIDGE_TOOLS) {
-      if (!t.hasAnnotations) continue;
+      if (!t.annotations) continue;
       assert.strictEqual(typeof t.annotations.openWorldHint, 'boolean',
         `${t.name}.openWorldHint should be boolean`);
     }
   });
 
-  test('annotated tools match their name in the hasAnnotations flag', () => {
-    // webmcp_invoke_tool is the only one without annotations
-    const noAnnotations = BRIDGE_TOOLS.filter(t => !t.hasAnnotations);
-    assert.strictEqual(noAnnotations.length, 1);
-    assert.strictEqual(noAnnotations[0].name, 'webmcp_invoke_tool');
+  test('tools with idempotentHint are also annotated', () => {
+    for (const t of BRIDGE_TOOLS) {
+      if (t.annotations && 'idempotentHint' in t.annotations) {
+        assert.strictEqual(typeof t.annotations.idempotentHint, 'boolean',
+          `${t.name}.idempotentHint should be boolean`);
+      }
+    }
+  });
+
+  test('inputSchema properties exist and have valid types', () => {
+    for (const t of BRIDGE_TOOLS) {
+      const props = t.inputSchema.properties;
+      if (!props) continue;
+      for (const [key, schema] of Object.entries(props)) {
+        assert.ok(typeof schema.type === 'string' || Array.isArray(schema.type),
+          `tool ${t.name} property "${key}" missing .type`);
+        assert.ok(typeof schema.description === 'string' || schema.description === undefined,
+          `tool ${t.name} property "${key}" .description should be string or undefined`);
+      }
+    }
   });
 });
 

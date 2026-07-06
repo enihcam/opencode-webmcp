@@ -54,6 +54,20 @@ This repo uses the openspec change proposal workflow. Skills are in `.opencode/s
 
 Reference `README.md` for the `opencode.json` MCP server config snippet. No `opencode.json` at repo root — integration is done in the consuming project.
 
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues (`enihcam/opencode-webmcp`). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout — one CONTEXT.md + docs/adr/ at repo root. See `docs/agents/domain.md`.
+
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
