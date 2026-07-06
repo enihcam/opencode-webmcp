@@ -15,7 +15,17 @@
     "ai-tools",
     "chrome-extension"
   ],
-  "repository": "github:enihcam/opencode-webmcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/enihcam/opencode-webmcp.git"
+  },
+  "files": [
+    "server.js",
+    "lib/",
+    "examples/",
+    "README.md",
+    "LICENSE"
+  ],
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
