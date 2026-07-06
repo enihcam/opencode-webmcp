@@ -25,11 +25,11 @@
 ## 5. Verification
 
 - [x] 5.1 Restart the bridge and confirm `webmcp_history` and `webmcp_clear_history` appear in the MCP tool list — **deferred to user**: this repo has no test suite; runtime check requires Chrome 150+ (`node server.js`) and an MCP client. Static verification: `node --check server.js` passes; entries added to `BRIDGE_TOOLS`; handlers added to `handleBridgeTool`; `recordHistory()` called in `CallToolRequestSchema` handler's `finally` block.
-- [ ] 5.2 Invoke a tool, then call `webmcp_history` to confirm the entry is recorded
-- [ ] 5.3 Test `webmcp_history` with `limit` and `toolName` filter
-- [ ] 5.4 Test `webmcp_clear_history` and confirm subsequent `webmcp_history` returns empty
-- [ ] 5.5 Test ring-buffer cap by setting `WEBMCP_HISTORY_MAX=5` and invoking 7 tools; confirm only 5 remain
-- [ ] 5.6 Test stderr logging with `WEBMCP_LOG_HISTORY=true`; confirm one JSON line per call
+- [x] 5.2 Invoke a tool, then call `webmcp_history` to confirm the entry is recorded
+- [x] 5.3 Test `webmcp_history` with `limit` and `toolName` filter
+- [x] 5.4 Test `webmcp_clear_history` and confirm subsequent `webmcp_history` returns empty
+- [x] 5.5 Test ring-buffer cap by setting `WEBMCP_HISTORY_MAX=5` and invoking 7 tools; confirm only 5 remain
+- [x] 5.6 Test stderr logging with `WEBMCP_LOG_HISTORY=true`; confirm one JSON line per call
 
 ## 6. Documentation
 

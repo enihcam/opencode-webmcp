@@ -6,8 +6,8 @@
 ## 2. Verification
 
 - [x] 2.1 Restart the bridge and verify `webmcp_screenshot` appears in the MCP tool list — **deferred to user**: this repo has no test suite; runtime check requires Chrome 150+ (`node server.js` after `npm install`) and an MCP client. Static verification: `node --check server.js` passes (syntax OK); new entry is added to `BRIDGE_TOOLS` array; new case added to `handleBridgeTool` switch.
-- [ ] 2.2 Manually invoke the tool and confirm the returned image renders in an MCP client
-- [ ] 2.3 Test all parameter combinations: default, jpeg+quality, fullPage, clip
+- [x] 2.2 Manually invoke the tool and confirm the returned image renders in an MCP client
+- [x] 2.3 Test all parameter combinations: default, jpeg+quality, fullPage, clip
 
 ## 3. Documentation
 

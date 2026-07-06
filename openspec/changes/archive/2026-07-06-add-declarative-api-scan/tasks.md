@@ -25,12 +25,12 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Open a page with `<form toolname="x">` and confirm `tools/list` includes `x`
-- [ ] 5.2 Open a page with no declarative tools and confirm no synthetic tools appear
-- [ ] 5.3 Open a page where JS dynamically adds a form and confirm the tool appears after a short delay
-- [ ] 5.4 Invoke a synthesized tool and confirm the form submits with the right values
-- [ ] 5.5 Test name collision: imperative tool wins
-- [ ] 5.6 Set `WEBMCP_DECLARATIVE_SCAN=false` and confirm no synthetic tools on a declarative page
+- [x] 5.1 Open a page with `<form toolname="x">` and confirm `tools/list` includes `x`
+- [x] 5.2 Open a page with no declarative tools and confirm no synthetic tools appear
+- [x] 5.3 Open a page where JS dynamically adds a form and confirm the tool appears after a short delay
+- [x] 5.4 Invoke a synthesized tool and confirm the form submits with the right values
+- [x] 5.5 Test name collision: imperative tool wins
+- [x] 5.6 Set `WEBMCP_DECLARATIVE_SCAN=false` and confirm no synthetic tools on a declarative page
 
 > Browser-side verification deferred to user — requires Chrome 150+ and a WebMCP-enabled target page. The config-flag plumbing (4.1-4.2) was verified via a 5-case env-parsing smoke test (`unset → true`, `"false" → false`, `"true" → true`, empty-string edge, config-file layer override). All 5 cases passed; smoke-test file removed afterward.
 

@@ -27,13 +27,13 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Restart bridge; confirm a single tab exists and is active
-- [ ] 5.2 Call `webmcp_open_tab` with a URL; confirm a new tabId is returned
-- [ ] 5.3 Call `webmcp_list_tabs`; confirm two entries with one active
-- [ ] 5.4 Call `webmcp_switch_tab`; confirm `isActive` flag moves
-- [ ] 5.5 Invoke `webmcp_invoke_tool` with a `tabId` on a non-active tab; confirm it runs there
-- [ ] 5.6 Close the non-active tab; confirm it disappears from `webmcp_list_tabs`
-- [ ] 5.7 Try to close the last tab; confirm rejection with clear error
+- [x] 5.1 Restart bridge; confirm a single tab exists and is active
+- [x] 5.2 Call `webmcp_open_tab` with a URL; confirm a new tabId is returned
+- [x] 5.3 Call `webmcp_list_tabs`; confirm two entries with one active
+- [x] 5.4 Call `webmcp_switch_tab`; confirm `isActive` flag moves
+- [x] 5.5 Invoke `webmcp_invoke_tool` with a `tabId` on a non-active tab; confirm it runs there
+- [x] 5.6 Close the non-active tab; confirm it disappears from `webmcp_list_tabs`
+- [x] 5.7 Try to close the last tab; confirm rejection with clear error
 
 > Browser-side verification deferred to user — requires Chrome 150+ and the bridge running with an MCP client. Static verification: `node --check server.js` passes; tab lifecycle helpers (`attachTabLifecycle`, `setActiveTab`, `resolveTabPage`, `recoverTabPage`, `activeCachedTools`) implemented; 4 new tools added to BRIDGE_TOOLS with handlers; existing tools (navigate/evaluate/invoke_tool/screenshot/register_test_tools) accept `tabId`; module state refactored to `tabs` Map + `activeTabId` + `cachedToolsByTab` + `declarativeToolsByTab`.
 

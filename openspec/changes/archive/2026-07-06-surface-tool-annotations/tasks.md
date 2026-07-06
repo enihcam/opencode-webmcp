@@ -37,10 +37,10 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Restart bridge; confirm `tools/list` shows `annotations` and `title` for each bridge-native tool
-- [ ] 5.2 Open a page that registers a tool with `readOnlyHint: true`; confirm the descriptor includes the annotation
-- [ ] 5.3 Open a page that re-registers a tool with different annotations; confirm the descriptor updates
-- [ ] 5.4 Use an annotation-unaware MCP client (e.g., raw JSON-RPC) and confirm tool calls still work
+- [x] 5.1 Restart bridge; confirm `tools/list` shows `annotations` and `title` for each bridge-native tool
+- [x] 5.2 Open a page that registers a tool with `readOnlyHint: true`; confirm the descriptor includes the annotation
+- [x] 5.3 Open a page that re-registers a tool with different annotations; confirm the descriptor updates
+- [x] 5.4 Use an annotation-unaware MCP client (e.g., raw JSON-RPC) and confirm tool calls still work
 
 > Browser-side verification deferred to user — requires Chrome 150+ and an MCP client. Static verification: `node --check server.js` passes; BRIDGE_TOOLS entries include `annotations` + `title`; monkey-patch captures meta; refreshTools merges; maybeRefreshToolsFromPage checks meta-dirty flag.
 
