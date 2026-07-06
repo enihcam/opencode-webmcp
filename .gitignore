@@ -1,3 +1,13 @@
 node_modules/
 .env
 .cache/puppeteer/
+
+# Agent/tool-specific (personal to each developer)
+.claude/
+.clinerules/
+.cursor/
+.opencode/
+.openflow/
+.roo/
+.windsurf/
+.codegraph/
