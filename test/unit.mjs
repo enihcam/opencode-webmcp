@@ -4,6 +4,10 @@
 // Pure-function tests for parseCliArgs, readConfigFile, loadConfig,
 // recordHistory, clearHistory, makeTabId, and BRIDGE_TOOLS validation.
 //
+
+import crypto from 'node:crypto';
+
+
 // Usage:
 //   node test/unit.mjs
 // =============================================================================
