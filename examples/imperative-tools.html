@@ -1,0 +1,181 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Imperative WebMCP Tools — Weather Dashboard</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 1rem; background: #f8fafc; color: #1e293b; }
+    h1 { margin-bottom: 0.25rem; }
+    .subtitle { color: #64748b; margin-top: 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+    .card { background: white; border-radius: 10px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .card h3 { margin: 0 0 0.5rem; font-size: 1rem; color: #334155; }
+    .card .value { font-size: 1.5rem; font-weight: 600; }
+    .card .meta { font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem; }
+    .badge { display: inline-block; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; background: #e2e8f0; color: #475569; margin-right: 0.25rem; }
+    .badge-destructive { background: #fecaca; color: #991b1b; }
+    .badge-readonly { background: #dbeafe; color: #1e40af; }
+    #log { background: #0f172a; color: #38bdf8; font-family: 'Fira Code', monospace; font-size: 0.85rem; padding: 1rem; border-radius: 8px; margin-top: 1.5rem; max-height: 300px; overflow-y: auto; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>⛅ Weather Dashboard</h1>
+  <p class="subtitle">Demonstrates imperative WebMCP tools with annotated metadata, async executors, and typed input schemas. Tools are registered via <code>document.modelContext.registerTool()</code>.</p>
+
+  <div class="grid" id="dashboard">
+    <div class="card"><h3>📍 Current City</h3><div class="value" id="currentCity">—</div></div>
+    <div class="card"><h3>🌡️ Temperature</h3><div class="value" id="currentTemp">—°C</div></div>
+    <div class="card"><h3>🌤️ Conditions</h3><div class="value" id="currentConditions">—</div></div>
+    <div class="card"><h3>💧 Humidity</h3><div class="value" id="currentHumidity">—%</div></div>
+  </div>
+
+  <div id="log">[log] Waiting for tool invocations...\n</div>
+
+  <p style="margin-top:1rem;font-size:0.85rem;color:#94a3b8;">
+    <span class="badge badge-readonly">readOnlyHint</span>
+    <span class="badge">idempotentHint</span>
+    <span class="badge badge-destructive">destructiveHint</span>
+    Annotations on each tool tell the client whether the tool mutates state, opens the world, or is idempotent.
+  </p>
+
+  <script>
+    // ---- local state -------------------------------------------------------
+    let alertThreshold = null;
+    const conditions = ['Sunny', 'Partly Cloudy', 'Cloudy', 'Light Rain', 'Clear', 'Foggy'];
+
+    function rng(seed) {
+      let s = seed;
+      return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 4294967296; };
+    }
+
+    function simulateWeather(city) {
+      const seed = city.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+      const rand = rng(seed);
+      return {
+        temperature: Math.round(10 + rand() * 30),
+        conditions: conditions[Math.floor(rand() * conditions.length)],
+        humidity: Math.round(40 + rand() * 40),
+      };
+    }
+
+    function updateDashboard(city, data) {
+      document.getElementById('currentCity').textContent = city;
+      document.getElementById('currentTemp').textContent = data.temperature + '°C';
+      document.getElementById('currentConditions').textContent = data.conditions;
+      document.getElementById('currentHumidity').textContent = data.humidity + '%';
+    }
+
+    const log = document.getElementById('log');
+    function appendLog(line) {
+      log.textContent += '> ' + line + '\n';
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // ---- WebMCP tool registrations -----------------------------------------
+    const ac = new AbortController();
+
+    // Tool 1: get_weather (async, query by city)
+    document.modelContext.registerTool({
+      name: 'get_weather',
+      description: 'Get current weather for a city. Returns temperature, conditions, and humidity.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          city: { type: 'string', description: 'City name (e.g., Tokyo, London)' },
+        },
+        required: ['city'],
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      execute: async ({ city }) => {
+        appendLog(`get_weather("${city}") called`);
+        const data = simulateWeather(city);
+        updateDashboard(city, data);
+        return { city, temperature: data.temperature, conditions: data.conditions, humidity: data.humidity, timestamp: new Date().toISOString() };
+      },
+    }, { signal: ac.signal });
+
+    // Tool 2: set_alert (destructive — changes alert threshold state)
+    document.modelContext.registerTool({
+      name: 'set_alert',
+      description: 'Set a temperature alert threshold (°C). When the temperature exceeds this value, the alert is triggered.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          threshold: { type: 'number', description: 'Temperature threshold in °C' },
+        },
+        required: ['threshold'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+      execute: async ({ threshold }) => {
+        alertThreshold = threshold;
+        appendLog(`set_alert threshold → ${threshold}°C (destructive)`);
+        if (alertThreshold !== null) {
+          const temp = simulateWeather(document.getElementById('currentCity').textContent || 'Tokyo').temperature;
+          if (temp > alertThreshold) {
+            appendLog(`⚠️  ALERT: Temperature ${temp}°C exceeds threshold ${alertThreshold}°C`);
+          }
+        }
+        return { status: 'ok', threshold };
+      },
+    }, { signal: ac.signal });
+
+    // Tool 3: get_forecast (async, multi-day, readOnly)
+    const forecastCache = {};
+    document.modelContext.registerTool({
+      name: 'get_forecast',
+      description: 'Get a 3-day weather forecast for a city. Results are cached per city for 30 seconds.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          city: { type: 'string', description: 'City name' },
+        },
+        required: ['city'],
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      execute: async ({ city }) => {
+        appendLog(`get_forecast("${city}") called`);
+        const cacheKey = city.toLowerCase();
+        const cached = forecastCache[cacheKey];
+        if (cached && Date.now() - cached.ts < 30000) {
+          appendLog(`  → returning cached forecast`);
+          return { ...cached.data, _cached: true };
+        }
+        const seed = city.split('').reduce((a, c) => a + c.charCodeAt(0), 1);
+        const rand = rng(seed);
+        const days = [];
+        const dayNames = ['Today', 'Tomorrow', 'Day 3'];
+        for (let i = 0; i < 3; i++) {
+          days.push({
+            day: dayNames[i],
+            high: Math.round(15 + rand() * 20),
+            low: Math.round(5 + rand() * 10),
+            conditions: conditions[Math.floor(rand() * conditions.length)],
+          });
+        }
+        const data = { city, forecast: days, generatedAt: new Date().toISOString() };
+        forecastCache[cacheKey] = { data, ts: Date.now() };
+        appendLog(`  → generated fresh forecast`);
+        return data;
+      },
+    }, { signal: ac.signal });
+
+    // Tool 4: clear_forecast_cache (idempotent, no side effects beyond cache)
+    document.modelContext.registerTool({
+      name: 'clear_forecast_cache',
+      description: 'Clear the in-memory forecast cache. Idempotent — calling it multiple times has the same effect.',
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+      annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: false },
+      execute: async () => {
+        Object.keys(forecastCache).forEach(k => delete forecastCache[k]);
+        appendLog(`clear_forecast_cache — cache cleared (${Object.keys(forecastCache).length} entries remain)`);
+        return { status: 'ok', cleared: true };
+      },
+    }, { signal: ac.signal });
+
+    appendLog('4 WebMCP tools registered (get_weather, set_alert, get_forecast, clear_forecast_cache)');
+  </script>
+</body>
+</html>

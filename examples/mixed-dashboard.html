@@ -1,0 +1,200 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Hybrid WebMCP Dashboard — Declarative + Imperative</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 1rem; background: #f8fafc; color: #1e293b; }
+    h1 { margin-bottom: 0.25rem; }
+    .subtitle { color: #64748b; margin-top: 0; }
+    .section { margin-top: 2rem; }
+    .section h2 { font-size: 1.1rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+    form { border: 2px solid #6366f1; padding: 1rem; border-radius: 10px; margin: 0.5rem 0; background: white; }
+    form.declarative { border-color: #22c55e; }
+    form.collision { border-color: #ef4444; }
+    label { display: block; margin: 0.5rem 0 0.25rem; font-size: 0.9rem; color: #475569; }
+    input, button, select { font: inherit; padding: 0.4rem; margin-bottom: 0.5rem; width: 100%; box-sizing: border-box; }
+    button { width: auto; padding: 0.4rem 1rem; cursor: pointer; }
+    .badge { display: inline-block; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; margin-left: 0.5rem; }
+    .badge-decl { background: #dcfce7; color: #166534; }
+    .badge-imp { background: #dbeafe; color: #1e40af; }
+    .badge-col { background: #fecaca; color: #991b1b; }
+    #log { background: #0f172a; color: #38bdf8; font-family: 'Fira Code', monospace; font-size: 0.85rem; padding: 1rem; border-radius: 8px; margin-top: 1.5rem; max-height: 250px; overflow-y: auto; white-space: pre-wrap; }
+    .tool-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0; }
+    .tool-chip { font-size: 0.8rem; padding: 0.2rem 0.5rem; border-radius: 4px; background: #e2e8f0; }
+    .tool-chip.imp { background: #dbeafe; }
+    .tool-chip.decl { background: #dcfce7; }
+  </style>
+</head>
+<body>
+  <h1>📊 Hybrid Dashboard</h1>
+  <p class="subtitle">Demonstrates declarative HTML forms + imperative JS tools on the same page, collision handling, and dynamic injection.</p>
+
+  <div class="section">
+    <h2>Registered Tools <span id="toolCount" style="font-weight:400;font-size:0.9rem;color:#64748b;">(0)</span></h2>
+    <div class="tool-list" id="toolList"></div>
+  </div>
+
+  <!-- Declarative tool: add_log_entry (form) -->
+  <div class="section">
+    <h2>Declarative <span class="badge badge-decl">declarative</span></h2>
+    <p style="font-size:0.85rem;color:#64748b;margin:0.25rem 0 0.75rem;">HTML form with <code>toolname</code> attribute — no JS registration needed.</p>
+    <form class="declarative" toolname="add_log_entry">
+      <label>Level
+        <select name="level" toolname-target="add_log_entry.level">
+          <option value="info">INFO</option>
+          <option value="warn">WARN</option>
+          <option value="error">ERROR</option>
+        </select>
+      </label>
+      <label>Message <input name="message" toolname-target="add_log_entry.message" required></label>
+      <button type="submit">Add Log Entry</button>
+    </form>
+  </div>
+
+  <!-- Collision demo: both declarative and imperative define "filter" -->
+  <div class="section">
+    <h2>Collision: <code>filter</code> <span class="badge badge-col">imperative wins</span></h2>
+    <p style="font-size:0.85rem;color:#64748b;margin:0.25rem 0 0.75rem;">The declarative <code>form[toolname="filter"]</code> and the JS <code>registerTool({name:"filter"})</code> both exist. The imperative version takes priority because it uses the CDP-based registration path.</p>
+    <form class="collision" toolname="filter">
+      <label>Keyword <input name="q" toolname-target="filter.q" required></label>
+      <label>Category
+        <select name="category" toolname-target="filter.category">
+          <option value="all">All</option>
+          <option value="logs">Logs</option>
+          <option value="metrics">Metrics</option>
+        </select>
+      </label>
+      <button type="submit">Filter</button>
+    </form>
+    <p style="font-size:0.8rem;color:#ef4444;">↳ The JS tool named <code>filter</code> overrides this form. Invoking <code>filter</code> will NOT submit the form — it calls the JS executor instead.</p>
+  </div>
+
+  <!-- Imperative tools registered via JS -->
+  <div class="section">
+    <h2>Imperative <span class="badge badge-imp">imperative</span></h2>
+    <p style="font-size:0.85rem;color:#64748b;margin:0.25rem 0 0.75rem;">Tools registered with <code>registerTool()</code> — async executors, typed schemas, annotations.</p>
+  </div>
+
+  <pre id="log">[log] page loaded, registering tools...\n</pre>
+
+  <script>
+    const log = document.getElementById('log');
+    function appendLog(line) {
+      log.textContent += '> ' + line + '\n';
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // ---- Capture all forms for submit logging --------------------------------
+    document.querySelectorAll('form[toolname]').forEach(f => {
+      f.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target));
+        appendLog(`[declarative] ${f.getAttribute('toolname')} called with ${JSON.stringify(data)}`);
+      });
+    });
+
+    // ---- Imperative tool registrations ---------------------------------------
+    const ac = new AbortController();
+
+    // filter — COLLISION with the declarative form above. Imperative wins.
+    document.modelContext.registerTool({
+      name: 'filter',
+      description: 'Filter records by keyword and category (imperative version). Overrides the declarative filter form.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          q: { type: 'string', description: 'Search keyword' },
+          category: { type: 'string', enum: ['all', 'logs', 'metrics'], description: 'Category filter' },
+        },
+        required: ['q'],
+      },
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      execute: async ({ q, category }) => {
+        appendLog(`[imperative] filter(q="${q}", category="${category || 'all'}") — overrides declarative form`);
+        // Simulate filtering
+        return { query: q, category: category || 'all', results: 42, note: 'Imperative override — the form was NOT submitted.' };
+      },
+    }, { signal: ac.signal });
+    appendLog('Registered imperative tool: filter (collision with declarative)');
+
+    // get_logs — pure read, async
+    document.modelContext.registerTool({
+      name: 'get_logs',
+      description: 'Return recent log entries from the page. Filter by level.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          level: { type: 'string', enum: ['all', 'info', 'warn', 'error'], description: 'Log level filter' },
+        },
+      },
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      execute: async ({ level }) => {
+        appendLog(`[imperative] get_logs(level="${level || 'all'}")`);
+        const all = [
+          { level: 'info', msg: 'Server started', ts: '2026-07-06T10:00:00Z' },
+          { level: 'info', msg: 'Connected to database', ts: '2026-07-06T10:00:01Z' },
+          { level: 'warn', msg: 'High memory usage (85%)', ts: '2026-07-06T10:01:00Z' },
+          { level: 'error', msg: 'Connection timeout to upstream', ts: '2026-07-06T10:02:00Z' },
+        ];
+        const filtered = level && level !== 'all' ? all.filter(e => e.level === level) : all;
+        return { count: filtered.length, entries: filtered };
+      },
+    }, { signal: ac.signal });
+    appendLog('Registered imperative tool: get_logs');
+
+    // ---- Dynamic injection (after 2 seconds) ---------------------------------
+    setTimeout(() => {
+      // Declarative: inject a new form
+      const dynForm = document.createElement('form');
+      dynForm.className = 'declarative';
+      dynForm.setAttribute('toolname', 'clear_logs');
+      dynForm.innerHTML = `
+        <label style="display:inline;margin:0;"><span style="font-weight:600;">clear_logs</span> — clear the log</label>
+        <button type="submit" style="width:auto;">Clear Log</button>
+      `;
+      document.querySelector('.section:first-of-type').after(dynForm);
+      dynForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        log.textContent = '[log] cleared by clear_logs\n';
+        appendLog('[declarative] clear_logs called — log cleared');
+      });
+      appendLog('[dynamic] Injected <form toolname="clear_logs">');
+
+      // Imperative: inject a new tool
+      document.modelContext.registerTool({
+        name: 'export_data',
+        description: 'Export dashboard data as JSON (injected dynamically).',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            format: { type: 'string', enum: ['json', 'csv'], description: 'Export format' },
+          },
+        },
+        annotations: { readOnlyHint: true, openWorldHint: false },
+        execute: async ({ format }) => {
+          appendLog(`[imperative] export_data(format="${format}") — dynamically injected tool`);
+          return { format, data: { message: 'Sample export data' }, exportedAt: new Date().toISOString() };
+        },
+      }, { signal: ac.signal });
+      appendLog('[dynamic] Registered imperative tool: export_data');
+    }, 2000);
+
+    // ---- Update tool list periodically ---------------------------------------
+    async function refreshToolList() {
+      try {
+        const tools = await document.modelContext.getTools();
+        const container = document.getElementById('toolList');
+        const count = document.getElementById('toolCount');
+        container.innerHTML = tools.map(t => {
+          const isDecl = t.__declarative || document.querySelector(`form[toolname="${CSS.escape(t.name)}"]`);
+          return `<span class="tool-chip ${isDecl ? 'decl' : 'imp'}">${t.name}</span>`;
+        }).join('');
+        count.textContent = `(${tools.length})`;
+      } catch {}
+    }
+    setInterval(refreshToolList, 3000);
+    setTimeout(refreshToolList, 500);
+  </script>
+</body>
+</html>

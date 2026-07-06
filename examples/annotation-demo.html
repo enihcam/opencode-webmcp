@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>WebMCP Annotation Reference</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 1rem; background: #f8fafc; color: #1e293b; }
+    h1 { margin-bottom: 0.25rem; }
+    .subtitle { color: #64748b; margin-top: 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+    .card { background: white; border-radius: 10px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-top: 4px solid #94a3b8; }
+    .card h3 { margin: 0 0 0.5rem; font-size: 1rem; }
+    .card .tool-name { font-family: 'Fira Code', monospace; font-size: 0.9rem; color: #6366f1; }
+    .card p { font-size: 0.85rem; color: #475569; margin: 0.5rem 0; }
+    .annotations { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.5rem 0; }
+    .tag { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 500; }
+    .tag-readonly { background: #dbeafe; color: #1e40af; }
+    .tag-destructive { background: #fecaca; color: #991b1b; }
+    .tag-idempotent { background: #dcfce7; color: #166534; }
+    .tag-openworld { background: #fef3c7; color: #92400e; }
+    .tag-false-readonly { background: #e2e8f0; color: #64748b; }
+    .tag-false { background: #e2e8f0; color: #64748b; }
+    .legend { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; padding: 1rem; background: white; border-radius: 8px; font-size: 0.85rem; }
+    .legend dt { font-weight: 600; }
+    .legend dd { margin: 0 0 0.5rem; color: #475569; }
+    code { background: #f1f5f9; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <h1>🎨 Annotation Reference</h1>
+  <p class="subtitle">Every WebMCP annotation combination mapped to a sample tool. Each card shows the annotation values visible to the MCP client. Hover over <code>registerTool</code> calls in the console for the full definition.</p>
+
+  <div class="grid" id="cards"></div>
+
+  <div class="legend">
+    <dl>
+      <dt><span class="tag tag-readonly">readOnlyHint</span></dt>
+      <dd>Tool only reads state; safe to auto-invoke.</dd>
+      <dt><span class="tag tag-destructive">destructiveHint</span></dt>
+      <dd>Tool may destroy or overwrite data irreversibly.</dd>
+      <dt><span class="tag tag-idempotent">idempotentHint</span></dt>
+      <dd>Repeated calls with same args produce the same result.</dd>
+      <dt><span class="tag tag-openworld">openWorldHint</span></dt>
+      <dd>Tool may interact with external services or the real world.</dd>
+      <dt><span class="tag tag-false">false</span></dt>
+      <dd>Annotation explicitly set to <code>false</code>, overriding any default.</dd>
+    </dl>
+  </div>
+
+  <script>
+    // ---- tool definitions with every annotation combo ------------------------
+    const toolDefs = [
+      {
+        name: 'system_info',
+        description: 'Returns system information (platform, memory, uptime). Pure read, no external effects.',
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+        execute: () => ({
+          platform: navigator.platform,
+          userAgent: navigator.userAgent,
+          language: navigator.language,
+          cores: navigator.hardwareConcurrency,
+        }),
+      },
+      {
+        name: 'delete_item',
+        description: 'Deletes an item by ID. Irreversible — readOnlyHint is false.',
+        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+        inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+        execute: ({ id }) => ({ deleted: id, status: 'ok' }),
+      },
+      {
+        name: 'toggle_setting',
+        description: 'Toggles a boolean setting. Mutates state but is idempotent — toggling twice returns to original.',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+        inputSchema: { type: 'object', properties: { setting: { type: 'string' }, value: { type: 'boolean' } }, required: ['setting', 'value'] },
+        execute: ({ setting, value }) => ({ setting, value, previous: !value }),
+      },
+      {
+        name: 'publish_post',
+        description: 'Publishes a post to an external API. Both destructive (creates remote state) and open-world (network).',
+        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+        inputSchema: { type: 'object', properties: { title: { type: 'string' }, body: { type: 'string' } }, required: ['title', 'body'] },
+        execute: async ({ title, body }) => {
+          // Simulated network call
+          await new Promise(r => setTimeout(r, 50));
+          return { id: crypto.randomUUID?.() || Math.random().toString(36).slice(2), title, status: 'published', openWorldHint: true };
+        },
+      },
+      {
+        name: 'list_cache_keys',
+        description: 'Returns all keys in the local cache. Pure read, no external effects, deterministic.',
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+        execute: () => ({ keys: Object.keys(sessionStorage), count: sessionStorage.length }),
+      },
+      {
+        name: 'send_email',
+        description: 'Sends an email via SMTP. Destructive (cannot unsend) and open-world (network). ReadOnlyHint is false.',
+        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+        inputSchema: { type: 'object', properties: { to: { type: 'string' }, subject: { type: 'string' }, body: { type: 'string' } }, required: ['to', 'subject', 'body'] },
+        execute: async ({ to, subject, body }) => {
+          await new Promise(r => setTimeout(r, 100));
+          return { sent: true, to, subject, timestamp: new Date().toISOString() };
+        },
+      },
+      {
+        name: 'format_json',
+        description: 'Formats a JSON string. Pure computation, read-only, idempotent, no external effects.',
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+        inputSchema: { type: 'object', properties: { json: { type: 'string' } }, required: ['json'] },
+        execute: ({ json }) => {
+          try { return { formatted: JSON.stringify(JSON.parse(json), null, 2) }; }
+          catch (e) { return { error: 'Invalid JSON' }; }
+        },
+      },
+    ];
+
+    // ---- render cards --------------------------------------------------------
+    const grid = document.getElementById('cards');
+
+    toolDefs.forEach(def => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.borderTopColor = def.annotations.destructiveHint ? '#ef4444' : def.annotations.readOnlyHint ? '#3b82f6' : '#94a3b8';
+
+      const h3 = document.createElement('h3');
+      h3.textContent = def.description;
+      card.appendChild(h3);
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'tool-name';
+      nameEl.textContent = def.name;
+      card.appendChild(nameEl);
+
+      const annDiv = document.createElement('div');
+      annDiv.className = 'annotations';
+      const annMap = {
+        readOnlyHint: 'readOnlyHint',
+        destructiveHint: 'destructiveHint',
+        idempotentHint: 'idempotentHint',
+        openWorldHint: 'openWorldHint',
+      };
+      for (const [key, label] of Object.entries(annMap)) {
+        const val = def.annotations[key];
+        if (val === true) {
+          annDiv.innerHTML += `<span class="tag tag-${key.replace('hint', '').toLowerCase()}">${label}</span>`;
+        } else if (val === false) {
+          annDiv.innerHTML += `<span class="tag tag-false">${label}: false</span>`;
+        }
+      }
+      card.appendChild(annDiv);
+
+      if (def.inputSchema) {
+        const params = document.createElement('div');
+        params.style.fontSize = '0.8rem';
+        params.style.color = '#94a3b8';
+        const props = Object.entries(def.inputSchema.properties || {});
+        params.textContent = `args: ${props.map(([k, v]) => `${k} (${v.type})`).join(', ') || 'none'}`;
+        card.appendChild(params);
+      }
+
+      grid.appendChild(card);
+    });
+
+    // ---- register tools -----------------------------------------------------
+    const ac = new AbortController();
+    toolDefs.forEach(def => {
+      document.modelContext.registerTool(def, { signal: ac.signal });
+    });
+
+    console.log(`[annotation-demo] Registered ${toolDefs.length} tools with varied annotations`);
+  </script>
+</body>
+</html>
