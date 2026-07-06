@@ -18,3 +18,37 @@ schema: spec-driven
 #       - Always include a "Non-goals" section
 #     tasks:
 #       - Break tasks into chunks of max 2 hours
+
+
+# Language preference for human-facing OpenFlow artifacts.
+# During /openflow init, replace this default with inferred or user-confirmed project language.
+language:
+  artifacts: en-US
+  detection: defaulted
+  appliesTo:
+    - proposal
+    - tasks
+    - plan-ready
+    - workflow-status
+    - human-facing summaries
+
+
+# Project context is injected into OpenSpec planning artifacts.
+# Keep this concise: Superpowers receives it later through plan-ready.md.
+context: |
+  TODO: Describe the project tech stack, architecture patterns, testing strategy,
+  code style, domain constraints, and external dependencies that AI implementers
+  must follow.
+
+
+rules:
+  specs:
+    - Reference existing specs before inventing new behavior.
+    - Every requirement must include concrete scenarios and acceptance checks.
+  design:
+    - Preserve project architecture patterns and explain any new dependency.
+  tasks:
+    - Include exact files, tests, verification commands, and rollback notes.
+  artifacts:
+    - Follow language.artifacts for human-facing OpenFlow outputs.
+    - Parser-required OpenSpec headings, CLI commands, code identifiers, and protocol keywords must remain in their required original form.

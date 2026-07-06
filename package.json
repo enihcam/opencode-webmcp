@@ -3,6 +3,18 @@
   "version": "0.2.0",
   "type": "module",
   "description": "MCP server bridge that exposes WebMCP tools from Chrome to OpenCode",
+  "keywords": [
+    "mcp",
+    "webmcp",
+    "mcp-server",
+    "opencode",
+    "claude-code",
+    "chrome-devtools",
+    "puppeteer",
+    "browser-automation",
+    "ai-tools",
+    "chrome-extension"
+  ],
   "main": "server.js",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.9.0",

@@ -1,0 +1,120 @@
+---
+name: openflow/close
+description: Verify implementation consistency and archive
+---
+
+# Close: 验证归档
+
+## 目标
+
+验证代码实现与设计文档一致，确认规格变更全部体现，然后归档。
+
+## 中断续接规则
+
+如果用户在 close 阶段被打断后继续回复、说“继续”、或要求完成归档，保持 close 阶段并继续验证/归档。close 阶段不允许顺手修代码；发现差异只记录到 `close-issues.md`。
+
+## 前置条件
+
+- `openspec/changes/<变更名>/plan-ready.md` 存在
+
+## 流程
+
+### 1. 确认并同步实现状态
+
+检查 `docs/superpowers/plans/` 下对应的计划文件和 `openspec/changes/<变更名>/tasks.md`：
+
+1. 读取 Superpowers 实现计划、OpenSpec tasks、design/specs、实际代码 diff 和验证输出。
+2. 对每个未勾选的 OpenSpec task，自动比对是否已有对应实现、测试或验证证据。
+3. 能明确确认完成的 task，直接将 `tasks.md` 中对应 checkbox 从 `- [ ]` 更新为 `- [x]`。
+4. 无法确认完成的 task 不勾选；将缺失证据或实现差异记录到 `openspec/changes/<变更名>/close-issues.md`。
+
+如果有未完成的 task：
+> "还有 N 个任务无法通过 close 自动比对确认，已记录到 close-issues.md。请先用 /openflow build 补齐实现或验证。"
+
+close 阶段可以同步 `tasks.md` checkbox 状态，但只能基于自动比对得到的明确证据；不能为了通过归档而猜测勾选，也不能改写任务内容或规格要求。
+
+### 2. 验证设计一致性
+
+读取 `openspec/changes/<变更名>/design.md`，逐项检查代码实现：
+
+- design.md 中的技术决策是否在代码中体现？
+- 标记的架构选择是否与代码结构一致？
+
+对每一项，给出判定：✅ 一致 / ❌ 不一致（附具体差异）
+
+### 3. 验证规格完整性
+
+读取 `openspec/changes/<变更名>/specs/` 目录，检查每个规格变更：
+
+- 标记为"新增"的功能是否已实现？
+- 标记为"修改"的行为是否已更新？
+- 标记为"删除"的旧逻辑是否已移除？
+
+对每一项，给出判定：✅ 已体现 / ❌ 未体现（附具体缺失）
+
+### 4. 处理不一致
+
+如果发现不一致：
+- **不在 close 阶段改代码**
+- 将不一致项记录到 `openspec/changes/<变更名>/close-issues.md`
+- 提示用户：
+  > "发现 N 处不一致，已记录到 close-issues.md。是否需要开启新的变更来修复？"
+
+### 5.5 更新 workflow-status.md（归档前）
+
+归档前，将 `openspec/changes/<变更名>/workflow-status.md` 更新为最终状态：
+
+- Phase: `close`
+- Status: `completed`
+- Gates: 全部标记为 `passed`（归档前必须全部通过）
+- Tasks: 全部标记为 `done` 或 `verified`
+- Next Command: 无（变更已完成）
+- Next Action: 可以开始新的 change
+
+归档后，`workflow-status.md` 随变更一起移入 `openspec/changes/archive/`。
+
+### 6. 归档
+
+全部一致（或用户接受不一致项）后，先校验变更：
+
+```bash
+openspec validate <变更名> --strict
+```
+
+校验通过后，先做归档前依赖检查，避免把依赖前置变更的 change 提前归档：
+
+1. 查看 `openspec/changes/<变更名>/specs/*/spec.md` 中的 delta 类型。
+2. 对每个包含 `## MODIFIED Requirements`、`## REMOVED Requirements` 或 `## RENAMED Requirements` 的 capability，确认 `openspec/specs/<capability>/spec.md` 已存在。
+3. 如果目标主规格不存在，即使当前 change 自身同时包含 `## ADDED Requirements`，也**不要**执行 `openspec archive`。OpenSpec 对新 capability 只允许 `ADDED Requirements`；同一 delta 中混入 `MODIFIED`、`REMOVED` 或 `RENAMED` 会被 CLI 拒绝。将阻塞原因写入 `openspec/changes/<变更名>/close-issues.md`，提示先把该 capability 的 delta 结构修正为全量 `ADDED Requirements`，或先归档创建基础规格的前置 change。
+4. 如果目标主规格不存在，检查其他活跃变更是否在 `openspec/changes/*/specs/<capability>/spec.md` 中包含 `## ADDED Requirements`。
+5. 如果找到这样的前置变更，**不要归档当前变更**。将阻塞原因写入 `openspec/changes/<变更名>/close-issues.md`，并明确提示先归档前置变更。例如：
+   > "归档被变更顺序阻塞：当前变更修改 `<capability>`，但主规格尚不存在。请先归档创建该规格的变更 `<前置变更名>`，再重新运行 /openflow close。"
+6. 如果没有找到前置变更，也不要归档；记录为规格结构不一致，提示需要先修正 delta 类型或创建基础规格。
+
+依赖检查通过后执行归档：
+
+```bash
+openspec archive <变更名> --yes
+```
+
+如果 OpenSpec CLI 不可用，手动归档：
+
+```bash
+mkdir -p openspec/changes/archive
+mv openspec/changes/<变更名> openspec/changes/archive/$(date +%Y-%m-%d)-<变更名>/
+```
+
+归档后确认：
+- 规格增量已合并到主规格库（如适用）
+- 变更记录已移到 archive 目录
+
+### 6. 完成提示
+
+> "变更 '<变更名>' 已验证并归档。可以开始下一个变更了。"
+
+## 关键原则
+
+- close 阶段不做代码修改，只做验证和归档
+- 本阶段只允许写归档、验证记录或 `close-issues.md`；禁止修改任何代码或实现文件
+- 不一致先记录，不现场修复
+- 防止边写代码边改需求的恶性循环
