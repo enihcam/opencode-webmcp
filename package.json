@@ -1,5 +1,5 @@
 {
-  "name": "webmcp-bridge",
+  "name": "@enihcam/webmcp-bridge",
   "version": "0.2.0",
   "type": "module",
   "description": "MCP server bridge that exposes WebMCP tools from Chrome to OpenCode",
@@ -15,6 +15,10 @@
     "ai-tools",
     "chrome-extension"
   ],
+  "repository": "github:enihcam/opencode-webmcp",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "main": "server.js",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.9.0",
