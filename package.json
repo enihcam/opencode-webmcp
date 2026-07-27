@@ -33,6 +33,6 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.9.0",
     "js-yaml": "^5.2.1",
-    "puppeteer-core": "^25.3.0"
+    "puppeteer-core": "^25.4.0"
   }
 }
