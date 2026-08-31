@@ -32,7 +32,7 @@
   "main": "server.js",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.9.0",
-    "js-yaml": "^5.2.1",
+    "js-yaml": "^5.4.1",
     "puppeteer-core": "^25.3.0"
   }
 }
